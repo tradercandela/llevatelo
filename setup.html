@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Setup · Llévátelo</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:#FDFAF6;color:#1A1410;min-height:100vh;padding:24px}
+    .wrap{max-width:560px;margin:0 auto}
+    .logo{font-family:'Fraunces',serif;font-size:26px;font-weight:700;text-align:center;padding:32px 0 6px}
+    .logo span{color:#F4500A}
+    .logo-sub{text-align:center;font-size:13px;color:#A8998C;margin-bottom:32px}
+    .card{background:#fff;border:1.5px solid #EDE8E0;border-radius:24px;padding:28px;margin-bottom:16px}
+    .card-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .card-num{width:32px;height:32px;border-radius:50%;background:#F4500A;color:white;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .card-num.done{background:#1E6B45}
+    .card-title{font-family:'Fraunces',serif;font-size:18px;font-weight:700}
+    .card-desc{font-size:14px;color:#6B5B4E;line-height:1.65;margin-bottom:16px}
+    .step-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+    .step-item{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#1A1410;line-height:1.5}
+    .step-item b{color:#F4500A}
+    .step-arrow{color:#A8998C;font-size:12px;margin-top:2px;flex-shrink:0}
+    .code-block{background:#1A1410;color:#f5f2ec;border-radius:12px;padding:16px;font-family:monospace;font-size:12px;line-height:1.7;position:relative;overflow:auto;max-height:320px;margin-bottom:12px;white-space:pre}
+    .copy-btn{position:absolute;top:10px;right:10px;background:#F4500A;color:white;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
+    .copy-btn:hover{background:#FF7240}
+    .flabel{display:block;font-size:11px;font-weight:700;color:#A8998C;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+    .finput{width:100%;padding:12px 14px;border:2px solid #EDE8E0;border-radius:10px;background:#F5F0EA;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:#1A1410;outline:none;margin-bottom:12px;transition:border-color .2s}
+    .finput:focus{border-color:#F4500A;background:#fff}
+    .finput::placeholder{color:#A8998C}
+    .btn{width:100%;padding:15px;border-radius:100px;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:700;transition:all .2s}
+    .btn-orange{background:#F4500A;color:white}
+    .btn-orange:hover{background:#FF7240}
+    .btn-orange:disabled{background:#A8998C;cursor:not-allowed}
+    .btn-green{background:#1E6B45;color:white}
+    .btn-green:hover{background:#25854f}
+    .alert{border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.6;margin-bottom:12px;display:flex;gap:10px;align-items:flex-start}
+    .alert-icon{font-size:18px;flex-shrink:0}
+    .alert-yellow{background:#FEF3C7;border:1px solid rgba(217,119,6,.2);color:#92400E}
+    .alert-green{background:#E8F5EE;border:1px solid rgba(30,107,69,.2);color:#1E6B45}
+    .alert-blue{background:#EFF6FF;border:1px solid rgba(29,78,216,.15);color:#1D4ED8}
+    .cred-box{background:#E8F5EE;border:1.5px solid rgba(30,107,69,.2);border-radius:14px;padding:18px;margin-bottom:14px}
+    .cred-title{font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:#1E6B45;margin-bottom:12px}
+    .cred-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(30,107,69,.1)}
+    .cred-row:last-child{border-bottom:none}
+    .cred-lbl{font-size:12px;font-weight:600;color:#6B5B4E}
+    .cred-val{font-size:13px;font-weight:800;color:#1A1410;font-family:monospace;background:#fff;padding:3px 10px;border-radius:6px;border:1px solid #EDE8E0}
+    .links{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+    .link-btn{display:block;padding:13px;border-radius:100px;text-align:center;font-weight:700;font-size:14px;text-decoration:none;transition:all .2s}
+    .link-primary{background:#F4500A;color:white}
+    .link-primary:hover{background:#FF7240}
+    .link-secondary{background:#F5F0EA;color:#1A1410;border:1.5px solid #EDE8E0}
+    .link-secondary:hover{border-color:#F4500A;color:#F4500A}
+    .log-box{background:#1A1410;color:#4ade80;border-radius:10px;padding:12px 14px;font-family:monospace;font-size:12px;line-height:1.8;max-height:180px;overflow-y:auto;margin-bottom:12px}
+    .log-err{color:#f87171}
+    .log-warn{color:#fbbf24}
+    .hidden{display:none}
+    .progress{height:6px;background:#EDE8E0;border-radius:6px;overflow:hidden;margin-bottom:20px}
+    .progress-bar{height:100%;background:#F4500A;border-radius:6px;width:0;transition:width .6s ease}
+    .img-hint{width:100%;border-radius:10px;border:1px solid #EDE8E0;margin-bottom:10px}
+    @media(max-width:480px){.links{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="logo">Llévate<span>lo</span></div>
+  <div class="logo-sub">Configuración inicial · 3 pasos</div>
+
+  <!-- ══ PASO 1: SQL ══ -->
+  <div class="card" id="card1">
+    <div class="card-header">
+      <div class="card-num" id="num1">1</div>
+      <div class="card-title">Crear las tablas en Supabase</div>
+    </div>
+    <div class="card-desc">Copia este SQL y ejecútalo en Supabase. Solo lo haces una vez.</div>
+    <div class="step-list">
+      <div class="step-item"><span class="step-arrow">→</span><span>Ve a <b>supabase.com</b> → tu proyecto → menú izquierdo: <b>SQL Editor</b></span></div>
+      <div class="step-item"><span class="step-arrow">→</span><span>Clic en <b>New query</b></span></div>
+      <div class="step-item"><span class="step-arrow">→</span><span>Pega el código de abajo y presiona <b>Run ▶</b></span></div>
+    </div>
+    <div style="position:relative">
+      <pre class="code-block" id="sqlCode">-- LLÉVÁTELO · Setup completo
+-- Ejecuta esto en Supabase > SQL Editor > New query
+
+-- 1. Tabla de usuarios
+create table if not exists public.usuarios (
+  id          uuid primary key references auth.users(id) on delete cascade,
+  nombre      text not null,
+  apellido    text,
+  telefono    text,
+  direccion   text,
+  avatar      text default '😊',
+  creado_en   timestamptz default now()
+);
+alter table public.usuarios enable row level security;
+drop policy if exists "sel_usu" on public.usuarios;
+create policy "sel_usu" on public.usuarios for select using (true);
+drop policy if exists "ins_usu" on public.usuarios;
+create policy "ins_usu" on public.usuarios for insert with check (auth.uid() = id);
+drop policy if exists "upd_usu" on public.usuarios;
+create policy "upd_usu" on public.usuarios for update using (auth.uid() = id);
+
+-- 2. Tabla de pedidos
+create table if not exists public.pedidos (
+  id                bigserial primary key,
+  usuario_id        uuid references auth.users(id),
+  nombre_cliente    text not null,
+  telefono_cliente  text,
+  direccion_entrega text not null,
+  negocio_id        int,
+  negocio_nombre    text,
+  items             jsonb,
+  subtotal          int not null default 0,
+  costo_domicilio   int default 0,
+  total             int not null default 0,
+  forma_pago        text default 'efectivo',
+  estado            text default 'recibido',
+  notas             text,
+  creado_en         timestamptz default now()
+);
+alter table public.pedidos enable row level security;
+drop policy if exists "ins_ped" on public.pedidos;
+create policy "ins_ped" on public.pedidos for insert with check (true);
+drop policy if exists "sel_ped" on public.pedidos;
+create policy "sel_ped" on public.pedidos for select using (true);
+drop policy if exists "upd_ped" on public.pedidos;
+create policy "upd_ped" on public.pedidos for update using (true);
+
+-- 3. Índices
+create index if not exists idx_ped_usuario on public.pedidos(usuario_id);
+create index if not exists idx_ped_estado  on public.pedidos(estado);
+create index if not exists idx_ped_fecha   on public.pedidos(creado_en desc);
+
+-- Listo ✅</pre>
+      <button class="copy-btn" onclick="copySql()">📋 Copiar</button>
+    </div>
+    <div class="alert alert-yellow">
+      <span class="alert-icon">⚠️</span>
+      <span>Después de ejecutar el SQL, vuelve aquí y continúa con el paso 2.</span>
+    </div>
+  </div>
+
+  <!-- ══ PASO 2: Desactivar confirmación email ══ -->
+  <div class="card" id="card2">
+    <div class="card-header">
+      <div class="card-num" id="num2">2</div>
+      <div class="card-title">Desactivar confirmación de correo</div>
+    </div>
+    <div class="card-desc">Para que el login funcione sin tener que confirmar emails.</div>
+    <div class="step-list">
+      <div class="step-item"><span class="step-arrow">→</span><span>En Supabase, ve a <b>Authentication</b> → <b>Providers</b></span></div>
+      <div class="step-item"><span class="step-arrow">→</span><span>Busca <b>Email</b> y haz clic para expandir</span></div>
+      <div class="step-item"><span class="step-arrow">→</span><span>Desactiva el toggle <b>"Confirm email"</b></span></div>
+      <div class="step-item"><span class="step-arrow">→</span><span>Clic en <b>Save</b></span></div>
+    </div>
+    <div class="alert alert-blue">
+      <span class="alert-icon">ℹ️</span>
+      <span>Esto permite que cualquier usuario entre de inmediato sin esperar un correo de verificación. Perfecto para el MVP.</span>
+    </div>
+  </div>
+
+  <!-- ══ PASO 3: Crear admin y restaurante ══ -->
+  <div class="card" id="card3">
+    <div class="card-header">
+      <div class="card-num" id="num3">3</div>
+      <div class="card-title">Crear usuario admin y restaurante</div>
+    </div>
+    <div class="card-desc">Una vez ejecutado el SQL y desactivada la confirmación, haz clic abajo. El sistema crea tu usuario admin y agrega el primer restaurante real automáticamente.</div>
+
+    <div class="alert alert-blue" style="margin-bottom:16px">
+      <span class="alert-icon">💡</span>
+      <div>Tu correo admin será: <b>admin.llevatelo@gmail.com</b><br>Si prefieres otro correo, cámbialo aquí:</div>
+    </div>
+
+    <label class="flabel">Tu correo admin</label>
+    <input class="finput" id="adminEmail" type="email" value="admin.llevatelo@gmail.com" placeholder="tucorreo@gmail.com"/>
+    <label class="flabel">Contraseña admin</label>
+    <input class="finput" id="adminPass" type="text" value="Llevatelo2025#" placeholder="Mínimo 6 caracteres"/>
+
+    <button class="btn btn-orange" id="setupBtn" onclick="runSetup()">⚡ Crear cuenta admin y restaurante</button>
+
+    <!-- LOG -->
+    <div class="log-box hidden" id="logBox"></div>
+
+    <!-- PROGRESS -->
+    <div class="progress hidden" id="progressWrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <!-- RESULT -->
+    <div class="hidden" id="resultBox">
+      <div class="cred-box">
+        <div class="cred-title">✅ ¡Todo configurado!</div>
+        <div class="cred-row"><span class="cred-lbl">Email admin</span><span class="cred-val" id="reEmail">—</span></div>
+        <div class="cred-row"><span class="cred-lbl">Contraseña</span><span class="cred-val" id="rePass">—</span></div>
+        <div class="cred-row"><span class="cred-lbl">Restaurante</span><span class="cred-val">Hamburguesería Don Luis ✓</span></div>
+        <div class="cred-row"><span class="cred-lbl">Estado</span><span class="cred-val" style="background:#E8F5EE;color:#1E6B45;border-color:rgba(30,107,69,.2)">Activo ✅</span></div>
+      </div>
+      <div class="links">
+        <a href="admin.html" class="link-btn link-primary">🔐 Abrir Panel Admin</a>
+        <a href="index.html" class="link-btn link-secondary">🛒 Ver App</a>
+      </div>
+    </div>
+
+    <div class="alert alert-yellow hidden" id="errorBox">
+      <span class="alert-icon">⚠️</span>
+      <span id="errorMsg">Error al configurar. Verifica que ejecutaste el SQL del paso 1 y desactivaste la confirmación de correo en el paso 2.</span>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+const SUPA_URL = 'https://hdharfqvuohgeogfhcin.supabase.co';
+const SUPA_KEY = 'sb_publishable_ABIBAv71a0M87JEE5C4nAg_qmVhQi2P';
+const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+function log(msg, type='ok') {
+  const box = document.getElementById('logBox');
+  box.classList.remove('hidden');
+  const cls = type==='err' ? 'log-err' : type==='warn' ? 'log-warn' : '';
+  box.innerHTML += `<span class="${cls}">${msg}</span>\n`;
+  box.scrollTop = box.scrollHeight;
+}
+function setProgress(pct) {
+  document.getElementById('progressWrap').classList.remove('hidden');
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function runSetup() {
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass  = document.getElementById('adminPass').value.trim();
+  if (!email || pass.length < 6) { alert('Revisa el correo y la contraseña (mínimo 6 caracteres)'); return; }
+
+  const btn = document.getElementById('setupBtn');
+  btn.disabled = true; btn.textContent = '⏳ Configurando...';
+  document.getElementById('errorBox').classList.add('hidden');
+
+  log('🚀 Iniciando configuración...');
+  setProgress(8);
+
+  // ── 1. Verificar que tablas existen ──
+  log('📊 Verificando tablas en la base de datos...');
+  const { error: tblErr } = await sb.from('pedidos').select('id', { count: 'exact', head: true });
+  if (tblErr) {
+    log('❌ Las tablas no existen aún. Ejecuta el SQL del paso 1 primero.', 'err');
+    showError('Las tablas no existen. Ejecuta el SQL del paso 1 en Supabase → SQL Editor.');
+    btn.disabled = false; btn.textContent = '⚡ Crear cuenta admin y restaurante';
+    return;
+  }
+  log('✅ Tablas encontradas'); setProgress(25);
+  await sleep(400);
+
+  // ── 2. Crear usuario admin ──
+  log(`👤 Creando usuario admin: ${email}...`);
+  const { data: signupData, error: signupErr } = await sb.auth.signUp({
+    email, password: pass,
+    options: { data: { nombre: 'Admin', rol: 'admin' } }
+  });
+
+  if (signupErr && !signupErr.message.toLowerCase().includes('already')) {
+    log(`❌ Error creando admin: ${signupErr.message}`, 'err');
+    if (signupErr.message.includes('not confirmed') || signupErr.message.includes('autoconfirm')) {
+      showError('Desactiva "Confirm email" en Supabase → Authentication → Providers → Email → Save.');
+    } else {
+      showError(signupErr.message);
+    }
+    btn.disabled = false; btn.textContent = '⚡ Crear cuenta admin y restaurante';
+    return;
+  }
+
+  if (signupErr?.message.toLowerCase().includes('already')) {
+    log('ℹ️ Usuario admin ya existía — OK', 'warn');
+  } else {
+    log('✅ Usuario admin creado');
+  }
+  setProgress(50); await sleep(400);
+
+  // ── 3. Intentar login para verificar ──
+  log('🔑 Verificando login...');
+  const { data: loginData, error: loginErr } = await sb.auth.signInWithPassword({ email, password: pass });
+
+  if (loginErr) {
+    if (loginErr.message.includes('not confirmed')) {
+      log('⚠️ Email sin confirmar. Ve al paso 2 y desactiva "Confirm email".', 'warn');
+      showError('Desactiva "Confirm email" en Supabase → Authentication → Providers → Email, luego vuelve a intentar.');
+      btn.disabled = false; btn.textContent = '⚡ Reintentar';
+      return;
+    }
+    log(`❌ Login falló: ${loginErr.message}`, 'err');
+    showError(loginErr.message);
+    btn.disabled = false; btn.textContent = '⚡ Reintentar';
+    return;
+  }
+
+  log('✅ Login exitoso'); setProgress(70); await sleep(300);
+
+  // ── 4. Guardar perfil admin en tabla usuarios ──
+  log('💾 Guardando perfil admin...');
+  const uid = loginData.user.id;
+  await sb.from('usuarios').upsert({
+    id: uid,
+    nombre: 'Admin',
+    apellido: 'Llévátelo',
+    telefono: '3000000000',
+    direccion: 'Floridablanca, Santander',
+    avatar: '👨‍💼',
+    creado_en: new Date().toISOString()
+  });
+  log('✅ Perfil admin guardado'); setProgress(82); await sleep(300);
+
+  // ── 5. Insertar pedido de prueba con restaurante real ──
+  log('🍔 Creando pedido de prueba (Hamburguesería Don Luis)...');
+  const { data: pedidoTest, error: pedErr } = await sb.from('pedidos').insert({
+    usuario_id:        uid,
+    nombre_cliente:    'Cliente de Prueba',
+    telefono_cliente:  '3001234567',
+    direccion_entrega: 'Cra 25 #34-12, Floridablanca',
+    negocio_id:        1,
+    negocio_nombre:    'Hamburguesería Don Luis',
+    items:             JSON.stringify([
+      { nombre: 'Hamburguesa Clásica', precio: 14000 },
+      { nombre: 'Gaseosa 400ml',       precio: 3500  }
+    ]),
+    subtotal:          17500,
+    costo_domicilio:   3000,
+    total:             20500,
+    forma_pago:        'efectivo',
+    estado:            'recibido',
+    creado_en:         new Date().toISOString()
+  }).select().single();
+
+  if (pedErr) {
+    log(`⚠️ Pedido de prueba no se pudo crear: ${pedErr.message}`, 'warn');
+  } else {
+    log(`✅ Pedido #${String(pedidoTest.id).slice(-6).toUpperCase()} creado`);
+  }
+  setProgress(95); await sleep(400);
+
+  // ── Cerrar sesión admin ──
+  await sb.auth.signOut();
+
+  log('🎉 ¡Configuración completa!'); setProgress(100);
+  await sleep(400);
+
+  // Mostrar resultado
+  document.getElementById('reEmail').textContent = email;
+  document.getElementById('rePass').textContent  = pass;
+  document.getElementById('resultBox').classList.remove('hidden');
+  document.getElementById('num1').textContent = '✓'; document.getElementById('num1').className = 'card-num done';
+  document.getElementById('num2').textContent = '✓'; document.getElementById('num2').className = 'card-num done';
+  document.getElementById('num3').textContent = '✓'; document.getElementById('num3').className = 'card-num done';
+  btn.textContent = '✅ Configuración completada';
+}
+
+function showError(msg) {
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('errorBox').classList.remove('hidden');
+  setProgress(0);
+  document.getElementById('progressWrap').classList.add('hidden');
+}
+
+function copySql() {
+  const txt = document.getElementById('sqlCode').textContent;
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✅ Copiado';
+    setTimeout(() => btn.textContent = '📋 Copiar', 2000);
+  });
+}
+</script>
+</body>
+</html>
