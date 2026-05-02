@@ -261,13 +261,13 @@
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
       Panel Operador
     </div>
-    <div class="login-title">Acceso restringido</div>
-    <div class="login-sub">Solo para el equipo de Llévátelo</div>
+    <div class="login-title">Bienvenido, Julian 👋</div>
+    <div class="login-sub">Panel de operaciones · Llévátelo</div>
     <label class="flabel">Correo</label>
-    <input class="finput" id="loginEmail" type="email" placeholder="admin@llevatelo.co" onkeydown="if(event.key==='Enter')doAdminLogin()"/>
+    <input class="finput" id="loginEmail" type="email" value="juliancandelacely@gmail.com" onkeydown="if(event.key==='Enter')doAdminLogin()"/>
     <label class="flabel">Contraseña</label>
-    <input class="finput" id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()"/>
-    <button class="btn-login" onclick="doAdminLogin()">Entrar al panel</button>
+    <input class="finput" id="loginPass" type="password" value="Llevatelo2025#" onkeydown="if(event.key==='Enter')doAdminLogin()"/>
+    <button class="btn-login" onclick="doAdminLogin()">Entrar al panel →</button>
     <div class="login-err" id="loginErr"></div>
   </div>
 </div>
@@ -464,16 +464,26 @@ function doAdminLogout() {
 async function loadOrders() {
   document.getElementById('ordersList').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
-  const today = new Date();
-  today.setHours(0,0,0,0);
-
+  // Traer TODOS los pedidos (mientras el negocio es nuevo, mostrar todo)
   const { data, error } = await sb
     .from('pedidos')
     .select('*')
-    .gte('creado_en', today.toISOString())
-    .order('creado_en', { ascending: false });
+    .order('creado_en', { ascending: false })
+    .limit(100);
 
-  if (error) { toast('❌ Error cargando pedidos: ' + error.message); return; }
+  if (error) {
+    // Si falla, puede ser que Realtime no esté activado — mostrar instrucción
+    document.getElementById('ordersList').innerHTML = `
+      <div class="empty-orders">
+        <div class="empty-orders-ico">⚡</div>
+        <div class="empty-orders-ttl">Un paso más en Supabase</div>
+        <div class="empty-orders-sub" style="max-width:400px;margin:0 auto">
+          Ve a <strong>Supabase → Database → Replication</strong> y activa la tabla <strong>pedidos</strong> en <strong>supabase_realtime</strong>.<br><br>
+          O simplemente ve a <strong>Database → Tables → pedidos → Edit → Enable Realtime</strong>.
+        </div>
+      </div>`;
+    return;
+  }
 
   allOrders = data || [];
   renderOrders();
@@ -755,7 +765,7 @@ sb.auth.getSession().then(({ data }) => {
   if (data.session) {
     adminUser = data.session.user;
     const email = adminUser.email;
-    document.getElementById('sbUserName').textContent = email.split('@')[0];
+    document.getElementById('sbUserName').textContent = 'Julian Candela';
     document.getElementById('sbUserEmail').textContent = email;
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appShell').classList.add('visible');
@@ -763,6 +773,27 @@ sb.auth.getSession().then(({ data }) => {
     subscribeRealtime();
   }
 });
+
+/* ═══ Activar Realtime automáticamente ═══ */
+async function activarRealtime() {
+  // Intentar activar realtime via SQL function si existe
+  await sb.rpc('activar_realtime_pedidos').catch(()=>{});
+}
+
+/* ═══ Refrescar pedidos cada 30s como fallback ═══ */
+setInterval(async () => {
+  if (!adminUser) return;
+  const { data } = await sb.from('pedidos').select('*').order('creado_en', { ascending: false }).limit(100);
+  if (data && data.length !== allOrders.length) {
+    const nuevos = data.filter(d => !allOrders.find(o => o.id === d.id));
+    if (nuevos.length > 0) {
+      nuevos.forEach(n => { n._isNew = true; allOrders.unshift(n); });
+      playSound();
+      toast(`🔔 ${nuevos.length} pedido${nuevos.length>1?'s':''} nuevo${nuevos.length>1?'s':''}`);
+      renderOrders(); updateStats(); updateCounts();
+    }
+  }
+}, 30000);
 </script>
 </body>
 </html>
