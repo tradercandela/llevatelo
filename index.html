@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Llevatelo - Delivery Bucaramanga</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet">
+<!-- Supabase se carga al final del body, antes del script de la app -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--or:#F4500A;--orl:#FF7240;--orb:#FFF1EB;--cr:#FDFAF6;--wm:#F5F0EA;--tx:#1A1410;--t2:#6B5B4E;--t3:#A8998C;--wh:#fff;--bd:#EDE8E0;--gn:#1E6B45;--gnb:#E8F5EE}
@@ -133,7 +134,7 @@ h1 em{font-style:italic;color:var(--or)}
 /* FOOTER */
 footer{background:var(--tx);padding:40px 20px}
 .foot-inner{max-width:1100px;margin:0 auto}
-.flogo{font-family:'Fraunces',serif;font-weight:700;font-size:24px;margin-bottom:6px}
+.flogo{font-family:'Fraunces',serif;font-weight:700;font-size:24px;margin-bottom:6px;color:#fff;white-space:nowrap}
 .flogo span{color:var(--or)}
 .ftag{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:20px}
 .flinks{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:16px}
@@ -448,13 +449,87 @@ footer{background:var(--tx);padding:40px 20px}
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- SIN SDK externo - fetch directo elimina el error window.supabase -->
 <script>
-// ---- SUPABASE: usa _sbc para evitar colision con variable global del SDK ----
 var _sbc = (function() {
-  return window.supabase.createClient(
-    'https://hdharfqvuohgeogfhcin.supabase.co',
-    'sb_publishable_ABIBAv71a0M87JEE5C4nAg_qmVhQi2P'
-  );
+  var BASE = 'https://hdharfqvuohgeogfhcin.supabase.co';
+  var KEY  = 'sb_publishable_ABIBAv71a0M87JEE5C4nAg_qmVhQi2P';
+  var tok  = null;
+
+  function hdrs(extra) {
+    var h = {'apikey':KEY,'Content-Type':'application/json','Authorization':'Bearer '+(tok||KEY)};
+    if (extra) for (var k in extra) h[k]=extra[k];
+    return h;
+  }
+
+  function restFetch(table, method, body, filters, single) {
+    var qs = filters && filters.length ? filters.join('&') : '';
+    if (method === 'GET') qs = (qs ? qs+'&' : '') + 'select=*';
+    var url = BASE+'/rest/v1/'+table+(qs?'?'+qs:'');
+    var h = hdrs(single ? {'Accept':'application/vnd.pgrst.object+json','Prefer':'return=representation'} : {'Prefer':'return=representation'});
+    var opts = {method:method, headers:h};
+    if (body !== null && method !== 'GET') opts.body = JSON.stringify(body);
+    return fetch(url, opts).then(function(r){
+      return r.text().then(function(t){
+        var d = t ? JSON.parse(t) : null;
+        if (!r.ok) return {data:null,error:d||{message:'HTTP '+r.status}};
+        if (single && Array.isArray(d)) d = d[0]||null;
+        return {data:d,error:null};
+      });
+    }).catch(function(e){return {data:null,error:{message:e.message||'network error'}};});
+  }
+
+  function QB(table){ this.t=table; this.f=[]; this.s=false; this.body=null; this.method='GET'; }
+  QB.prototype.eq=function(c,v){this.f.push(c+'=eq.'+encodeURIComponent(v));return this;};
+  QB.prototype.order=function(c,o){this.f.push('order='+c+'.'+(o&&o.ascending===false?'desc':'asc'));return this;};
+  QB.prototype.limit=function(n){this.f.push('limit='+n);return this;};
+  QB.prototype.single=function(){this.s=true;return this;};
+  QB.prototype.select=function(s){if(s&&s!=='*')this.f.push('select='+s);return this;};
+  QB.prototype.then=function(res,rej){return restFetch(this.t,this.method,this.body,this.f,this.s).then(res,rej);};
+  QB.prototype.catch=function(fn){return restFetch(this.t,this.method,this.body,this.f,this.s).catch(fn);};
+
+  var auth = {
+    getSession: function(){
+      var s=null; try{s=JSON.parse(localStorage.getItem('_ll_s')||'null');}catch(e){}
+      if(s&&s.access_token) tok=s.access_token;
+      return Promise.resolve({data:{session:s}});
+    },
+    signUp: function(c){
+      return fetch(BASE+'/auth/v1/signup',{method:'POST',headers:hdrs(),body:JSON.stringify({email:c.email,password:c.password,data:(c.options&&c.options.data)||{}})})
+        .then(function(r){return r.json();}).then(function(d){
+          if(d.error||d.msg) return {data:{user:null},error:{message:d.error_description||d.msg||d.error||'Error al registrar'}};
+          if(d.access_token){tok=d.access_token;try{localStorage.setItem('_ll_s',JSON.stringify(d));}catch(e){}}
+          return {data:{user:d.user||d},error:null};
+        }).catch(function(e){return {data:{user:null},error:{message:e.message}};});
+    },
+    signInWithPassword: function(c){
+      return fetch(BASE+'/auth/v1/token?grant_type=password',{method:'POST',headers:hdrs(),body:JSON.stringify({email:c.email,password:c.password})})
+        .then(function(r){return r.json();}).then(function(d){
+          if(d.error||d.error_code) return {data:{user:null,session:null},error:{message:d.error_description||d.msg||'Correo o contrasena incorrectos'}};
+          tok=d.access_token;
+          try{localStorage.setItem('_ll_s',JSON.stringify(d));}catch(e){}
+          return {data:{user:d.user,session:d},error:null};
+        }).catch(function(e){return {data:{user:null,session:null},error:{message:e.message}};});
+    },
+    signOut: function(){
+      tok=null; try{localStorage.removeItem('_ll_s');}catch(e){}
+      return Promise.resolve({error:null});
+    }
+  };
+
+  return {
+    auth: auth,
+    from: function(table){
+      return {
+        select: function(s){ var q=new QB(table); if(s&&s!=='*')q.f.push('select='+s); return q; },
+        insert: function(b){ var q=new QB(table); q.method='POST'; q.body=b; q.s=true; return q; },
+        upsert: function(b){ var q=new QB(table); q.method='POST'; q.body=b; q.s=false;
+          q.then=function(r,j){return fetch(BASE+'/rest/v1/'+table,{method:'POST',headers:hdrs({'Prefer':'resolution=merge-duplicates,return=representation'}),body:JSON.stringify(b)}).then(function(x){return x.json();}).then(function(d){return {data:d,error:null};}).then(r,j);};
+          return q; },
+        update: function(b){ var q=new QB(table); q.method='PATCH'; q.body=b; return q; }
+      };
+    }
+  };
 })();
 
 // ---- NEGOCIOS ----
